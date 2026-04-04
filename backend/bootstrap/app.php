@@ -13,10 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Apply CORS headers to all API requests
-        // This allows Next.js (port 3000) to call Laravel API (port 8000)
-        $middleware->api(prepend: [
-            HandleCors::class,
+        // Apply CORS globally — must run before any route matching
+        // This ensures preflight OPTIONS requests are handled correctly
+        $middleware->prepend(HandleCors::class);
+
+        // Enable _method override for both web and api
+        // Required for PUT/DELETE via multipart/form-data
+        $middleware->api(append: [
+            \Illuminate\Http\Middleware\HttpMethodOverride::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

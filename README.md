@@ -42,48 +42,44 @@ devfolio/
 ├── backend/                  # Laravel 11
 │   ├── app/
 │   │   ├── Http/
-│   │   │   ├── Controllers/
-│   │   │   │   └── Api/
-│   │   │   │       ├── AuthController.php
-│   │   │   │       └── ProjectController.php
-│   │   │   ├── Middleware/
-│   │   │   │   └── AdminOnly.php
-│   │   │   └── Requests/
-│   │   │       ├── StoreProjectRequest.php
-│   │   │       └── UpdateProjectRequest.php
+│   │   │   └── Controllers/
+│   │   │       └── Api/
+│   │   │           ├── AuthController.php
+│   │   │           └── ProjectController.php
 │   │   ├── Models/
 │   │   │   └── Project.php
 │   │   └── Services/
 │   │       └── CloudinaryService.php
-│   ├── database/
-│   │   └── migrations/
-│   ├── routes/
-│   │   └── api.php
-│   └── .env
+│   ├── database/migrations/
+│   └── routes/api.php
 │
 ├── frontend/                 # Next.js 15
 │   ├── app/
-│   │   ├── (public)/         # Portfolio pages
-│   │   │   ├── page.tsx      # Home
-│   │   │   └── projects/
-│   │   │       └── page.tsx
-│   │   └── (admin)/          # Protected admin panel
+│   │   ├── (public)/
+│   │   │   ├── page.tsx
+│   │   │   └── projects/page.tsx
+│   │   └── (admin)/
 │   │       └── dashboard/
-│   │           └── page.tsx
+│   │           ├── page.tsx
+│   │           └── projects/
+│   │               ├── new/page.tsx
+│   │               └── [id]/edit/page.tsx
 │   ├── components/
 │   │   ├── ui/               # shadcn components
-│   │   └── animations/       # GSAP wrappers
+│   │   ├── sections/         # Hero, About, ProjectsGrid, Contact
+│   │   ├── shared/           # Navbar, ProjectCard, FilterBar
+│   │   └── admin/            # ProjectForm
+│   ├── hooks/
+│   │   └── useAuth.ts
 │   ├── lib/
-│   │   ├── api.ts            # Axios instance
-│   │   └── auth.ts           # Token management
+│   │   ├── api.ts            # fetch wrapper (no axios)
+│   │   ├── auth.ts           # token management
+│   │   └── types.ts          # TypeScript interfaces
 │   └── .env.local
 │
 ├── docker/
-│   ├── nginx/
-│   │   └── default.conf
-│   └── php/
-│       └── Dockerfile
-│
+│   ├── nginx/default.conf
+│   └── php/Dockerfile
 └── docker-compose.yml
 
 ```
@@ -178,11 +174,11 @@ services:
 |-------|--------------------------------------------|---------|
 | 0     | Planning + README                          | ✅ Done |
 | 1     | Docker + Laravel init + DB migration       | ✅ Done |
-| 2     | CRUD API + Filter + Cloudinary             | ⏳ Next |
-| 3     | Sanctum Auth + Admin middleware            | 🔒 Locked|
-| 4     | Next.js init + Axios setup + Public pages  | 🔒 Locked|
-| 5     | Admin panel (protected)                    | 🔒 Locked|
-| 6     | GSAP animations + shadcn polish            | 🔒 Locked|
+| 2     | CRUD API + Filter + Cloudinary             | ✅ Done |
+| 3     | Sanctum Auth + CORS                        | ✅ Done |
+| 4     | Next.js init + fetch wrapper + types       | ✅ Done |
+| 5     | Admin panel (protected)                    | 🔧 WIP  |
+| 6     | Public portfolio + GSAP animations         | ⏳ Next |
 | 7     | Deploy-ready config + security audit       | 🔒 Locked|
 
 ---

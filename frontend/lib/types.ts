@@ -1,4 +1,3 @@
-// Project type — matches the database schema exactly
 export interface Project {
     id: number;
     title: string;
@@ -8,17 +7,16 @@ export interface Project {
     image_url: string | null;
     github_url: string | null;
     deploy_url: string | null;
+    blog_url: string | null;
     is_featured: boolean;
     created_at: string;
     updated_at: string;
 }
 
-// API response wrapper — Laravel returns { data: ... }
 export interface ApiResponse<T> {
     data: T;
 }
 
-// Auth types
 export interface LoginCredentials {
     email: string;
     password: string;
@@ -33,7 +31,6 @@ export interface AuthResponse {
     };
 }
 
-// Filter params for the projects list
 export interface ProjectFilters {
     category?: 'frontend' | 'backend' | 'fullstack' | 'all';
     sort?: 'latest' | 'oldest';

@@ -19,6 +19,7 @@ class Project extends Model
         'image_url',
         'github_url',
         'deploy_url',
+        'blog_url',
         'is_featured',
     ];
 
