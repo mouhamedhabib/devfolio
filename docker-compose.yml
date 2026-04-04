@@ -1,0 +1,76 @@
+services:
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: ../docker/php/Dockerfile
+    container_name: devfolio_app
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    volumes:
+      - ./backend:/var/www/backend
+    networks:
+      - devfolio_network
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: devfolio_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: devfolio_db
+      POSTGRES_USER: devfolio_user
+      POSTGRES_PASSWORD: devfolio_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - devfolio_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devfolio_user -d devfolio_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    container_name: devfolio_nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./backend:/var/www/backend
+    networks:
+      - devfolio_network
+    depends_on:
+      - app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: devfolio_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    networks:
+      - devfolio_network
+    depends_on:
+      - nginx
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  devfolio_network:
+    driver: bridge

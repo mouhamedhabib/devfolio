@@ -1,0 +1,17 @@
+# Laravel
+backend/.env
+backend/vendor/
+backend/storage/logs/
+backend/bootstrap/cache/
+
+# Next.js
+frontend/.env.local
+frontend/.env.production
+frontend/.next/
+frontend/node_modules/
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
