@@ -43,22 +43,27 @@ class ProjectController extends Controller
             'category'     => 'required|in:frontend,backend,fullstack',
             'tech_stack'   => 'required|array',
             'tech_stack.*' => 'string',
-            'image'        => 'nullable|image|max:2048',
+            // Accept either a file upload or a direct URL — not both
+            'image'        => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
+            'image_url'    => 'nullable|url|max:500',
             'github_url'   => 'nullable|url|max:500',
             'deploy_url'   => 'nullable|url|max:500',
             'blog_url'     => 'nullable|url|max:500',
-            // Accept checkbox value "on" or boolean
             'is_featured'  => 'nullable',
         ]);
 
-        // Normalize is_featured — checkbox sends "on", API sends true/false
         $validated['is_featured'] = filter_var(
             $request->input('is_featured', false),
             FILTER_VALIDATE_BOOLEAN
         );
 
+        // File upload takes priority over URL
         if ($request->hasFile('image')) {
             $validated['image_url'] = $this->cloudinary->uploadImage($request->file('image'));
+        }
+        // If no file but URL provided, use it directly
+        elseif ($request->filled('image_url')) {
+            $validated['image_url'] = $request->input('image_url');
         }
 
         unset($validated['image']);
@@ -79,14 +84,14 @@ class ProjectController extends Controller
             'category'     => 'sometimes|in:frontend,backend,fullstack',
             'tech_stack'   => 'sometimes|array',
             'tech_stack.*' => 'string',
-            'image'        => 'nullable|image|max:2048',
+            'image'        => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:2048',
+            'image_url'    => 'nullable|url|max:500',
             'github_url'   => 'nullable|url|max:500',
             'deploy_url'   => 'nullable|url|max:500',
             'blog_url'     => 'nullable|url|max:500',
             'is_featured'  => 'nullable',
         ]);
 
-        // Normalize is_featured
         if ($request->has('is_featured')) {
             $validated['is_featured'] = filter_var(
                 $request->input('is_featured'),
@@ -95,10 +100,11 @@ class ProjectController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            if ($project->image_url) {
-                $this->cloudinary->deleteImage($project->image_url);
-            }
+            // Delete old Cloudinary image before uploading new one
+            $this->cloudinary->deleteImage($project->image_url);
             $validated['image_url'] = $this->cloudinary->uploadImage($request->file('image'));
+        } elseif ($request->filled('image_url')) {
+            $validated['image_url'] = $request->input('image_url');
         }
 
         unset($validated['image']);
@@ -113,10 +119,7 @@ class ProjectController extends Controller
 
     public function destroy(Project $project): JsonResponse
     {
-        if ($project->image_url) {
-            $this->cloudinary->deleteImage($project->image_url);
-        }
-
+        $this->cloudinary->deleteImage($project->image_url);
         $project->delete();
 
         return response()->json(['message' => 'Project deleted successfully'], 200);

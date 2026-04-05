@@ -1,22 +1,25 @@
-// Token key used in localStorage
 const TOKEN_KEY = 'devfolio_admin_token';
 
-// Save token to localStorage after successful login
+// Guard: localStorage only exists in the browser, not during SSR
+function isBrowser(): boolean {
+    return typeof window !== 'undefined';
+}
+
 export function saveToken(token: string): void {
+    if (!isBrowser()) return;
     localStorage.setItem(TOKEN_KEY, token);
 }
 
-// Get token from localStorage — returns null if not logged in
 export function getToken(): string | null {
+    if (!isBrowser()) return null;
     return localStorage.getItem(TOKEN_KEY);
 }
 
-// Remove token from localStorage on logout
 export function removeToken(): void {
+    if (!isBrowser()) return;
     localStorage.removeItem(TOKEN_KEY);
 }
 
-// Check if admin is currently logged in
 export function isAuthenticated(): boolean {
     return getToken() !== null;
 }

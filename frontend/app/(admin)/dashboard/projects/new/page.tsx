@@ -3,19 +3,28 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import ProjectForm from '@/components/admin/ProjectForm';
+import { getToken } from '@/lib/auth';
 import { toast } from 'sonner';
 
 export default function NewProjectPage() {
-    const { token, loading } = useAuth();
+    const { loading } = useAuth();
     const router = useRouter();
 
-    // Submit handler — sends multipart/form-data to support image upload
     async function handleSubmit(formData: FormData) {
+        // Read token at call time — not at definition time
+        // This avoids stale closure issues with token being null
+        const currentToken = getToken();
+
+        if (!currentToken) {
+            toast.error('Not authenticated');
+            router.replace('/login');
+            return;
+        }
+
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/projects`, {
             method: 'POST',
             headers: {
-                // Do NOT set Content-Type here — browser sets it with boundary for multipart
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${currentToken}`,
                 'Accept': 'application/json',
             },
             body: formData,
@@ -37,7 +46,7 @@ export default function NewProjectPage() {
         <div className="min-h-screen bg-background p-6">
             <div className="max-w-2xl mx-auto">
                 <h1 className="text-2xl font-bold mb-6">New Project</h1>
-                {token && <ProjectForm token={token} onSubmit={handleSubmit} />}
+                <ProjectForm token="" onSubmit={handleSubmit} />
             </div>
         </div>
     );

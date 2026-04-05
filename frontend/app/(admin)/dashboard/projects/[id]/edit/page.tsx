@@ -5,19 +5,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useParams } from 'next/navigation';
 import ProjectForm from '@/components/admin/ProjectForm';
 import { get } from '@/lib/api';
+import { getToken } from '@/lib/auth';
 import { Project, ApiResponse } from '@/lib/types';
 import { toast } from 'sonner';
 
 export default function EditProjectPage() {
-    const { token, loading } = useAuth();
+    const { loading } = useAuth();
     const router = useRouter();
     const params = useParams();
     const [project, setProject] = useState<Project | null>(null);
     const [fetching, setFetching] = useState(true);
 
-    // Fetch the existing project data to pre-fill the form
     useEffect(() => {
-        if (!token) return;
+        if (loading) return;
 
         get<ApiResponse<Project>>(`/projects/${params.id}`)
             .then(res => setProject(res.data))
@@ -26,12 +26,19 @@ export default function EditProjectPage() {
                 router.push('/dashboard');
             })
             .finally(() => setFetching(false));
-    }, [token, params.id]);
+    }, [loading, params.id]);
 
-    // Submit handler — uses PUT with multipart/form-data
     async function handleSubmit(formData: FormData) {
-        // Laravel does not support PUT with multipart — use POST with _method override
-        // This is called "method spoofing" — Laravel reads _method field
+        // Read token at call time to avoid stale closure
+        const currentToken = getToken();
+
+        if (!currentToken) {
+            toast.error('Not authenticated');
+            router.replace('/login');
+            return;
+        }
+
+        // Method spoofing — Laravel does not support PUT with multipart
         formData.append('_method', 'PUT');
 
         const res = await fetch(
@@ -39,7 +46,7 @@ export default function EditProjectPage() {
             {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${currentToken}`,
                     'Accept': 'application/json',
                 },
                 body: formData,
@@ -63,13 +70,7 @@ export default function EditProjectPage() {
         <div className="min-h-screen bg-background p-6">
             <div className="max-w-2xl mx-auto">
                 <h1 className="text-2xl font-bold mb-6">Edit Project</h1>
-                {token && (
-                    <ProjectForm
-                        project={project}
-                        token={token}
-                        onSubmit={handleSubmit}
-                    />
-                )}
+                <ProjectForm project={project} token="" onSubmit={handleSubmit} />
             </div>
         </div>
     );

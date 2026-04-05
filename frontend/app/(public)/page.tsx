@@ -10,7 +10,7 @@ import { ApiResponse, Project } from '@/lib/types';
 async function getFeaturedProjects(): Promise<Project[]> {
     try {
         const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/projects?featured=true&sort=latest`,
+            `${process.env.NEXT_INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL}/projects?featured=true&sort=latest`,
             // Revalidate every 60 seconds — ISR (Incremental Static Regeneration)
             { next: { revalidate: 60 } }
         );

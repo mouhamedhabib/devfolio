@@ -16,21 +16,37 @@ interface ProjectFormProps {
     onSubmit: (formData: FormData) => Promise<void>;
 }
 
+// Two modes for image input: upload a file or paste a URL
+type ImageMode = 'upload' | 'url';
+
 export default function ProjectForm({ project, token, onSubmit }: ProjectFormProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [techStack, setTechStack] = useState<string[]>(project?.tech_stack ?? []);
     const [techInput, setTechInput] = useState('');
+    // Default to URL mode if project already has an image_url
+    const [imageMode, setImageMode] = useState<ImageMode>(
+        project?.image_url ? 'url' : 'upload'
+    );
+    const [imageUrl, setImageUrl] = useState(project?.image_url ?? '');
 
-    function addTech(e: React.KeyboardEvent<HTMLInputElement>) {
+    function addTech(value: string) {
+        const trimmed = value.trim().replace(/,$/, '');
+        if (trimmed && !techStack.includes(trimmed)) {
+            setTechStack(prev => [...prev, trimmed]);
+        }
+        setTechInput('');
+    }
+
+    function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
-            const value = techInput.trim();
-            if (value && !techStack.includes(value)) {
-                setTechStack([...techStack, value]);
-            }
-            setTechInput('');
+            addTech(techInput);
         }
+    }
+
+    function onBlur() {
+        if (techInput.trim()) addTech(techInput);
     }
 
     function removeTech(tech: string) {
@@ -39,7 +55,13 @@ export default function ProjectForm({ project, token, onSubmit }: ProjectFormPro
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        if (techStack.length === 0) {
+
+        const remainingInput = techInput.trim().replace(/,$/, '');
+        const finalStack = remainingInput && !techStack.includes(remainingInput)
+            ? [...techStack, remainingInput]
+            : techStack;
+
+        if (finalStack.length === 0) {
             toast.error('Add at least one technology');
             return;
         }
@@ -47,7 +69,23 @@ export default function ProjectForm({ project, token, onSubmit }: ProjectFormPro
         setLoading(true);
         const form = new FormData(e.currentTarget);
         form.delete('tech_input');
-        techStack.forEach(tech => form.append('tech_stack[]', tech));
+        form.delete('image_url_input');
+        form.delete('image');
+
+        finalStack.forEach(tech => form.append('tech_stack[]', tech));
+
+        // Add image based on selected mode
+        if (imageMode === 'url' && imageUrl.trim()) {
+            // Pass URL directly — backend stores it without Cloudinary
+            form.append('image_url', imageUrl.trim());
+        } else if (imageMode === 'upload') {
+            // Pass file — backend uploads to Cloudinary
+            const fileInput = (e.currentTarget as HTMLFormElement)
+                .querySelector<HTMLInputElement>('#image');
+            if (fileInput?.files?.[0]) {
+                form.append('image', fileInput.files[0]);
+            }
+        }
 
         try {
             await onSubmit(form);
@@ -88,85 +126,102 @@ export default function ProjectForm({ project, token, onSubmit }: ProjectFormPro
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="tech_input">Tech Stack</Label>
+                <Label htmlFor="tech_input">
+                    Tech Stack
+                    <span className="text-muted-foreground text-xs ml-2">
+                        Press Enter or comma to add
+                    </span>
+                </Label>
                 <Input
                     id="tech_input"
                     name="tech_input"
                     value={techInput}
                     onChange={e => setTechInput(e.target.value)}
-                    onKeyDown={addTech}
-                    placeholder="Type a technology and press Enter"
+                    onKeyDown={onKeyDown}
+                    onBlur={onBlur}
+                    placeholder="e.g. React, Laravel, Docker..."
                 />
-                <div className="flex flex-wrap gap-2 mt-2">
-                    {techStack.map(tech => (
-                        <Badge
-                            key={tech}
-                            variant="secondary"
-                            className="cursor-pointer"
-                            onClick={() => removeTech(tech)}
-                        >
-                            {tech} ✕
-                        </Badge>
-                    ))}
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="image">Project Image</Label>
-                {project?.image_url && (
-                    <img src={project.image_url} alt="Current" className="w-32 h-20 object-cover rounded mb-2" />
+                {techStack.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {techStack.map(tech => (
+                            <Badge
+                                key={tech}
+                                variant="secondary"
+                                className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                                onClick={() => removeTech(tech)}
+                            >
+                                {tech} ✕
+                            </Badge>
+                        ))}
+                    </div>
                 )}
-                <Input id="image" name="image" type="file" accept="image/*" />
             </div>
 
-            {/* External links — all optional */}
-            <div className="space-y-4 border rounded-lg p-4">
-                <p className="text-sm font-medium text-muted-foreground">
-                    Links — all optional. Shown as action buttons on the project card.
-                </p>
+            {/* Image — toggle between upload and URL */}
+            <div className="space-y-3">
+                <Label>Project Image</Label>
 
+                {/* Mode toggle */}
+                <div className="flex gap-2">
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant={imageMode === 'upload' ? 'default' : 'outline'}
+                        onClick={() => setImageMode('upload')}
+                    >
+                        Upload File
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant={imageMode === 'url' ? 'default' : 'outline'}
+                        onClick={() => setImageMode('url')}
+                    >
+                        Paste URL
+                    </Button>
+                </div>
+
+                {imageMode === 'upload' ? (
+                    <Input id="image" name="image" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" />
+                ) : (
+                    <Input
+                        id="image_url_input"
+                        name="image_url_input"
+                        type="url"
+                        value={imageUrl}
+                        onChange={e => setImageUrl(e.target.value)}
+                        placeholder="https://example.com/image.png"
+                    />
+                )}
+
+                {/* Preview current image */}
+                {(imageUrl || project?.image_url) && imageMode === 'url' && (
+                    <img
+                        src={imageUrl || project?.image_url || ''}
+                        alt="Preview"
+                        className="w-40 h-24 object-cover rounded border"
+                    />
+                )}
+            </div>
+
+            <div className="space-y-4 border rounded-lg p-4">
+                <p className="text-sm font-medium text-muted-foreground">Links — all optional</p>
                 <div className="space-y-2">
                     <Label htmlFor="github_url">GitHub URL</Label>
-                    <Input
-                        id="github_url"
-                        name="github_url"
-                        type="url"
-                        defaultValue={project?.github_url ?? ''}
-                        placeholder="https://github.com/user/repo"
-                    />
+                    <Input id="github_url" name="github_url" type="url" defaultValue={project?.github_url ?? ''} placeholder="https://github.com/user/repo" />
                 </div>
-
                 <div className="space-y-2">
                     <Label htmlFor="deploy_url">Deploy URL</Label>
-                    <Input
-                        id="deploy_url"
-                        name="deploy_url"
-                        type="url"
-                        defaultValue={project?.deploy_url ?? ''}
-                        placeholder="https://myproject.vercel.app"
-                    />
+                    <Input id="deploy_url" name="deploy_url" type="url" defaultValue={project?.deploy_url ?? ''} placeholder="https://myproject.vercel.app" />
                 </div>
-
                 <div className="space-y-2">
                     <Label htmlFor="blog_url">Blog / Article URL</Label>
-                    <Input
-                        id="blog_url"
-                        name="blog_url"
-                        type="url"
-                        defaultValue={project?.blog_url ?? ''}
-                        placeholder="https://dev.to/user/my-project"
-                    />
+                    <Input id="blog_url" name="blog_url" type="url" defaultValue={project?.blog_url ?? ''} placeholder="https://dev.to/user/my-project" />
                 </div>
             </div>
 
             <div className="flex items-center gap-2">
-                <input
-                    id="is_featured"
-                    name="is_featured"
-                    type="checkbox"
-                    defaultChecked={project?.is_featured ?? false}
-                    className="w-4 h-4"
-                />
+                <input id="is_featured" name="is_featured" type="checkbox" defaultChecked={project?.is_featured ?? false} className="w-4 h-4" />
                 <Label htmlFor="is_featured">Featured on homepage</Label>
             </div>
 

@@ -6,7 +6,7 @@ import { ApiResponse, Project } from '@/lib/types';
 async function getAllProjects(): Promise<Project[]> {
     try {
         const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/projects?sort=latest`,
+            `${process.env.NEXT_INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL}/projects?sort=latest`,
             { next: { revalidate: 60 } }
         );
 
